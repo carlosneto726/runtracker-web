@@ -1,0 +1,64 @@
+services:
+    app:
+        build:
+            context: .
+            dockerfile: docker/Dockerfile
+            target: app
+        restart: unless-stopped
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        working_dir: /var/www/
+        ports:
+            - 5173:5173
+        user: username
+        volumes:
+            - './app:/var/www/app'
+            - './config:/var/www/config'
+            - './database:/var/www/database'
+            - './resources:/var/www/resources'
+            - './storage/app/uploads:/var/www/storage/app/uploads'
+            - './routes:/var/www/routes'
+            - './tests:/var/www/tests'
+            - './composer.json:/var/www/composer.json'
+            - './composer.lock:/var/www/composer.lock'
+            - './.env:/var/www/.env'
+        networks:
+            - laravel
+        expose:
+            - 9000
+        depends_on:
+            - db
+    db:
+        image: mysql:5.7.22
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE:-laravel}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+            MYSQL_PASSWORD: ${DB_PASSWORD:-userpass}
+            MYSQL_USER: ${DB_USERNAME:-username}
+        volumes:
+            - ./.docker/mysql/dbdata:/var/lib/mysql
+        ports:
+            - "3388:3306"
+        networks:
+            - laravel
+    nginx:
+        build:
+            context: .
+            dockerfile: docker/Dockerfile
+            target: nginx
+        restart: unless-stopped
+        ports:
+            - "8989:80"
+        networks:
+            - laravel
+        depends_on:
+            - app
+
+networks:
+    laravel:
+        driver: bridge
+
+volumes:
+    mysql-db:
+        driver: local
