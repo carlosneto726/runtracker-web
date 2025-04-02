@@ -1,14 +1,12 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-
-// use Tymon\JWTAuth\Facades\JWTAuth;
-// use Tymon\JWTAuth\Exceptions\JWTException;
+use App\Models\User;
 
 class AuthController extends Controller
 {
@@ -23,23 +21,24 @@ class AuthController extends Controller
         );
 
         if ($usuario->id) {
-            return redirect()->back()->withErrors([
-                "mensagem" => "Email já cadastrado"
-            ]);
+            return response()->json([
+                'type' => 'error',
+                'msg' => 'Esse usuário já existe.',
+            ], 500);
         }
 
         $usuario->save();
-
-        return redirect()->route("login")->with(
-            "success", "usuário criado com sucesso"
-        );
+        return response()->json([
+            'type'=> 'success',
+            'msg' => 'Usuário criado com sucesso.'
+        ], 201);
     }
 
     public function login(Request $request)
     {
         $credentials = $request->only('email', 'password');
 
-        if (!$token = Auth::attempt($credentials)) {
+        if (!$token = Auth::guard('api')->attempt($credentials)) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
@@ -54,7 +53,10 @@ class AuthController extends Controller
     public function logout()
     {
         Auth::logout();
-        return response()->json(['message' => 'Successfully logged out']);
+        return response()->json([
+            'type'=> 'success',
+            'msg' => 'Deslogado com sucesso.'
+        ]);
     }
 
     public function refresh()
@@ -67,7 +69,7 @@ class AuthController extends Controller
         return response()->json([
             'access_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => Auth::factory()->getTTL() * 60
+            'expires_in' => Auth::guard('api')->factory()->getTTL() * 60
         ]);
     }
 }
